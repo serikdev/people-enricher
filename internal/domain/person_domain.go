@@ -30,6 +30,12 @@ type PersonFilter struct {
 	PageSize    int     `json:"page_size"`
 }
 
+type PersonInput struct {
+	Name       string  `json:"name"`
+	Surname    string  `json:"surname"`
+	Patronymic *string `json:"patronymic,omitempty"`
+}
+
 type PersonRepo interface {
 	Create(ctx context.Context, person *Person) (*Person, error)
 	Update(ctx context.Context, person *Person) (*Person, error)

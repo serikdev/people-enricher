@@ -1,8 +1,8 @@
 
-include .env
+export $(shell grep -v '^#' .env | xargs)
 
 migrate:
-	bash scripts/migrate/migrate.sh
+	bash scripts/migrate.sh
 
 run:
 	go run cmd/api/main.go
