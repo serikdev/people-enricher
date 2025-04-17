@@ -1,4 +1,4 @@
-package domain
+package entity
 
 import (
 	"context"
@@ -36,14 +36,6 @@ type PersonInput struct {
 	Name       string  `json:"name"`
 	Surname    string  `json:"surname"`
 	Patronymic *string `json:"patronymic,omitempty"`
-}
-
-type PersonRepo interface {
-	Create(ctx context.Context, person *Person) (*Person, error)
-	Update(ctx context.Context, person *Person) (*Person, error)
-	Delete(ctx context.Context, id int64) error
-	GetById(ctx context.Context, id int64) (*Person, error)
-	List(ctx context.Context, filter *PersonFilter) ([]*Person, int, error)
 }
 
 type PersonService interface {

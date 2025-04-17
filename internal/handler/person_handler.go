@@ -7,7 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"people-enricher/internal/domain"
+	"people-enricher/internal/entity"
 	"strconv"
 	"strings"
 
@@ -16,12 +16,12 @@ import (
 
 // PersonHandler handles HTTP requests for person operations
 type PersonHandler struct {
-	service domain.PersonService
+	service entity.PersonService
 	log     *logrus.Logger
 }
 
 // NewPersonHandler creates a new PersonHandler
-func NewPersonHandler(service domain.PersonService, log *logrus.Logger) *PersonHandler {
+func NewPersonHandler(service entity.PersonService, log *logrus.Logger) *PersonHandler {
 	return &PersonHandler{
 		service: service,
 		log:     log,
@@ -42,13 +42,13 @@ func extractIDFromURL(path string) (int, error) {
 // @Tags persons
 // @Accept json
 // @Produce json
-// @Param person body domain.PersonInput true "Person data to create"
-// @Success 201 {object} domain.Person
+// @Param person body entity.PersonInput true "Person data to create"
+// @Success 201 {object} entity.Person
 // @Failure 400 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
 // @Router /persons [post]
 func (h *PersonHandler) Create(w http.ResponseWriter, r *http.Request) {
-	var input domain.PersonInput
+	var input entity.PersonInput
 
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		h.log.WithError(err).Debug("Error decoding request body")
@@ -69,7 +69,7 @@ func (h *PersonHandler) Create(w http.ResponseWriter, r *http.Request) {
 		"patronymic": input.Patronymic,
 	}).Debug("Creating new person")
 
-	person := &domain.Person{
+	person := &entity.Person{
 		Name:       input.Name,
 		Surname:    input.Surname,
 		Patronymic: input.Patronymic,
@@ -92,8 +92,8 @@ func (h *PersonHandler) Create(w http.ResponseWriter, r *http.Request) {
 // @Accept json
 // @Produce json
 // @Param id path int true "Person ID"
-// @Param person body domain.Person true "Person data to update"
-// @Success 200 {object} domain.Person
+// @Param person body entity.Person true "Person data to update"
+// @Success 200 {object} entity.Person
 // @Failure 400 {object} ErrorResponse
 // @Failure 404 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
@@ -106,7 +106,7 @@ func (h *PersonHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var input domain.Person
+	var input entity.Person
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		h.log.WithError(err).Debug("Error decoding request body")
 		respondWithError(w, http.StatusBadRequest, "Invalid request payload")
@@ -183,12 +183,12 @@ func (h *PersonHandler) Delete(w http.ResponseWriter, r *http.Request) {
 // @Accept json
 // @Produce json
 // @Param id path int true "Person ID"
-// @Success 200 {object} domain.Person
+// @Success 200 {object} entity.Person
 // @Failure 400 {object} ErrorResponse
 // @Failure 404 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
 // @Router /persons/{id} [get]
-func (h *PersonHandler) GetByID(ctx context.Context, id int64) (*domain.Person, error) {
+func (h *PersonHandler) GetByID(ctx context.Context, id int64) (*entity.Person, error) {
 	logger := h.log.WithFields(logrus.Fields{
 		"operation": "GetByID",
 		"person_id": id,
@@ -230,7 +230,7 @@ func (h *PersonHandler) GetByID(ctx context.Context, id int64) (*domain.Person, 
 func (h *PersonHandler) List(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 
-	filter := &domain.PersonFilter{}
+	filter := &entity.PersonFilter{}
 
 	if name := query.Get("name"); name != "" {
 		filter.Name = &name
@@ -299,7 +299,7 @@ func (h *PersonHandler) List(w http.ResponseWriter, r *http.Request) {
 
 // PaginatedResponse represents a paginated response
 type PaginatedResponse struct {
-	Data       []domain.Person `json:"data"`
+	Data       []entity.Person `json:"data"`
 	Total      int             `json:"total"`
 	Page       int             `json:"page"`
 	PageSize   int             `json:"page_size"`
@@ -328,8 +328,8 @@ func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 	w.Write(response)
 }
 
-func toFlatList(persons []*domain.Person) []domain.Person {
-	result := make([]domain.Person, len(persons))
+func toFlatList(persons []*entity.Person) []entity.Person {
+	result := make([]entity.Person, len(persons))
 	for i, p := range persons {
 		result[i] = *p
 	}

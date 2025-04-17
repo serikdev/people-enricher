@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"people-enricher/internal/domain"
+	"people-enricher/internal/entity"
 	"strings"
 	"time"
 
@@ -25,7 +25,7 @@ func NewPersonRepo(pool *pgxpool.Pool, logger *logrus.Logger) *PersonRepo {
 	}
 }
 
-func (r *PersonRepo) Create(ctx context.Context, person *domain.Person) (*domain.Person, error) {
+func (r *PersonRepo) Create(ctx context.Context, person *entity.Person) (*entity.Person, error) {
 	logger := r.logger.WithField("operation", "Create")
 	logger.Debug("Creating new record about person")
 
@@ -55,7 +55,7 @@ func (r *PersonRepo) Create(ctx context.Context, person *domain.Person) (*domain
 		person.UpdatedAt,
 	)
 
-	var ceatedPerson domain.Person
+	var ceatedPerson entity.Person
 	err := row.Scan(
 		&ceatedPerson.ID,
 		&ceatedPerson.Name,
@@ -76,7 +76,7 @@ func (r *PersonRepo) Create(ctx context.Context, person *domain.Person) (*domain
 	return &ceatedPerson, nil
 }
 
-func (r *PersonRepo) Update(ctx context.Context, person *domain.Person) (*domain.Person, error) {
+func (r *PersonRepo) Update(ctx context.Context, person *entity.Person) (*entity.Person, error) {
 	logger := r.logger.WithField("operation", "Update").WithField("person_id", person.ID)
 	logger.Debug("Update person")
 
@@ -109,7 +109,7 @@ func (r *PersonRepo) Update(ctx context.Context, person *domain.Person) (*domain
 		person.ID,
 	)
 
-	var updatedPerson domain.Person
+	var updatedPerson entity.Person
 	err := row.Scan(
 		&updatedPerson.ID,
 		&updatedPerson.Name,
@@ -155,7 +155,7 @@ func (r *PersonRepo) Delete(ctx context.Context, id int64) error {
 	return nil
 }
 
-func (r *PersonRepo) GetByID(ctx context.Context, id int64) (*domain.Person, error) {
+func (r *PersonRepo) GetByID(ctx context.Context, id int64) (*entity.Person, error) {
 	logger := r.logger.WithField("operation", "GetByID").WithField("person_id", id)
 	logger.Debug("Получение записи о человеке по ID")
 
@@ -167,7 +167,7 @@ func (r *PersonRepo) GetByID(ctx context.Context, id int64) (*domain.Person, err
 
 	row := r.pool.QueryRow(ctx, query, id)
 
-	var person domain.Person
+	var person entity.Person
 	err := row.Scan(
 		&person.ID,
 		&person.Name,
@@ -194,7 +194,7 @@ func (r *PersonRepo) GetByID(ctx context.Context, id int64) (*domain.Person, err
 	return &person, nil
 }
 
-func (r *PersonRepo) List(ctx context.Context, filter *domain.PersonFilter) ([]*domain.Person, int, error) {
+func (r *PersonRepo) List(ctx context.Context, filter *entity.PersonFilter) ([]*entity.Person, int, error) {
 	logger := r.logger.WithField("operation", "List")
 	logger.WithField("filter", filter).Debug("Getting person list")
 
@@ -284,9 +284,9 @@ func (r *PersonRepo) List(ctx context.Context, filter *domain.PersonFilter) ([]*
 	}
 	defer rows.Close()
 
-	people := []*domain.Person{}
+	people := []*entity.Person{}
 	for rows.Next() {
-		var person domain.Person
+		var person entity.Person
 		err := rows.Scan(
 			&person.ID,
 			&person.Name,

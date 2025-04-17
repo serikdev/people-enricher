@@ -5,12 +5,20 @@ import (
 	"context"
 	"fmt"
 
+	"people-enricher/internal/adapter/repository"
 	"people-enricher/internal/client"
-	"people-enricher/internal/domain"
-	"people-enricher/internal/repository"
+	"people-enricher/internal/entity"
 
 	"github.com/sirupsen/logrus"
 )
+
+type PersonRepo interface {
+	Create(ctx context.Context, person *entity.Person) (*entity.Person, error)
+	Update(ctx context.Context, person *entity.Person) (*entity.Person, error)
+	Delete(ctx context.Context, id int64) error
+	GetById(ctx context.Context, id int64) (*entity.Person, error)
+	List(ctx context.Context, filter *entity.PersonFilter) ([]*entity.Person, int, error)
+}
 
 type personService struct {
 	repo     repository.PersonRepo
@@ -18,7 +26,7 @@ type personService struct {
 	log      *logrus.Logger
 }
 
-func NewPersonService(repo repository.PersonRepo, enricher *client.Enricher, log *logrus.Logger) domain.PersonService {
+func NewPersonService(repo repository.PersonRepo, enricher *client.Enricher, log *logrus.Logger) *personService {
 	return &personService{
 		repo:     repo,
 		enricher: enricher,
@@ -26,7 +34,7 @@ func NewPersonService(repo repository.PersonRepo, enricher *client.Enricher, log
 	}
 }
 
-func (s *personService) Create(ctx context.Context, input *domain.Person) (*domain.Person, error) {
+func (s *personService) Create(ctx context.Context, input *entity.Person) (*entity.Person, error) {
 	s.log.WithFields(logrus.Fields{
 		"name":       input.Name,
 		"surname":    input.Surname,
@@ -40,7 +48,7 @@ func (s *personService) Create(ctx context.Context, input *domain.Person) (*doma
 
 	}
 
-	person := &domain.Person{
+	person := &entity.Person{
 		Name:       input.Name,
 		Surname:    input.Surname,
 		Patronymic: input.Patronymic,
@@ -72,7 +80,7 @@ func (s *personService) Create(ctx context.Context, input *domain.Person) (*doma
 	return createdPerson, nil
 }
 
-func (s *personService) GetById(ctx context.Context, id int64) (*domain.Person, error) {
+func (s *personService) GetById(ctx context.Context, id int64) (*entity.Person, error) {
 	s.log.WithField("id", id).Info("Fetching person by ID")
 	person, err := s.repo.GetByID(ctx, id)
 	if err != nil {
@@ -86,7 +94,7 @@ func (s *personService) GetById(ctx context.Context, id int64) (*domain.Person, 
 	return person, nil
 }
 
-func (s *personService) Update(ctx context.Context, person *domain.Person) (*domain.Person, error) {
+func (s *personService) Update(ctx context.Context, person *entity.Person) (*entity.Person, error) {
 	s.log.WithFields(logrus.Fields{
 		"id":         person.ID,
 		"name":       person.Name,
@@ -151,7 +159,7 @@ func ptrString(s string) *string {
 	return &s
 }
 
-func (s *personService) List(ctx context.Context, filter *domain.PersonFilter) ([]*domain.Person, int, error) {
+func (s *personService) List(ctx context.Context, filter *entity.PersonFilter) ([]*entity.Person, int, error) {
 
 	s.log.Infof("got request: %+v", filter)
 
