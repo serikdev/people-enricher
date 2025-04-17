@@ -1,5 +1,5 @@
 
-export $(shell grep -v '^#' .env | xargs)
+# export $(shell grep -v '^#' .env | xargs)
 
 migrate:
 	bash scripts/migrate.sh

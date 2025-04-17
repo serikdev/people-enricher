@@ -5,8 +5,8 @@ import (
 	"context"
 	"fmt"
 
+	"people-enricher/internal/client"
 	"people-enricher/internal/domain"
-	"people-enricher/internal/enricher"
 	"people-enricher/internal/repository"
 
 	"github.com/sirupsen/logrus"
@@ -14,11 +14,11 @@ import (
 
 type personService struct {
 	repo     repository.PersonRepo
-	enricher *enricher.Enricher
+	enricher *client.Enricher
 	log      *logrus.Logger
 }
 
-func NewPersonService(repo repository.PersonRepo, enricher *enricher.Enricher, log *logrus.Logger) domain.PersonService {
+func NewPersonService(repo repository.PersonRepo, enricher *client.Enricher, log *logrus.Logger) domain.PersonService {
 	return &personService{
 		repo:     repo,
 		enricher: enricher,

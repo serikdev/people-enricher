@@ -7,7 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"people-enricher/internal/enricher"
+	"people-enricher/internal/client"
 	"people-enricher/internal/handler"
 	"people-enricher/internal/repository"
 	"people-enricher/internal/service"
@@ -26,10 +26,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error loading .env file")
 	}
+
 	connString := os.Getenv("DATABASE_URL")
-	if connString == "" {
-		log.Fatal("DATABASE_URL not set in .env file")
-	}
+	fmt.Println("DATABASE_URL from .env file:")
 
 	dbpool, err := pgxpool.New(context.Background(), connString)
 	if err != nil {
@@ -39,7 +38,7 @@ func main() {
 
 	repo := repository.NewPersonRepo(dbpool, logger)
 
-	enricherService := enricher.NewEnricher(logger)
+	enricherService := client.NewEnricher(logger)
 
 	personService := service.NewPersonService(*repo, enricherService, logger)
 

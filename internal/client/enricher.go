@@ -1,4 +1,4 @@
-package enricher
+package client
 
 import (
 	"context"
