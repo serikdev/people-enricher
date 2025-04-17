@@ -14,11 +14,13 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// PersonHandler handles HTTP requests for person operations
 type PersonHandler struct {
 	service domain.PersonService
 	log     *logrus.Logger
 }
 
+// NewPersonHandler creates a new PersonHandler
 func NewPersonHandler(service domain.PersonService, log *logrus.Logger) *PersonHandler {
 	return &PersonHandler{
 		service: service,
@@ -34,6 +36,17 @@ func extractIDFromURL(path string) (int, error) {
 	return strconv.Atoi(parts[len(parts)-1])
 }
 
+// Create godoc
+// @Summary Create a new person
+// @Description Create a new person with name, surname and optional patronymic
+// @Tags persons
+// @Accept json
+// @Produce json
+// @Param person body domain.PersonInput true "Person data to create"
+// @Success 201 {object} domain.Person
+// @Failure 400 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /persons [post]
 func (h *PersonHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var input domain.PersonInput
 
@@ -73,6 +86,18 @@ func (h *PersonHandler) Create(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusCreated, createdPerson)
 }
 
+// @Summary Update a person
+// @Description Update an existing person by ID
+// @Tags persons
+// @Accept json
+// @Produce json
+// @Param id path int true "Person ID"
+// @Param person body domain.Person true "Person data to update"
+// @Success 200 {object} domain.Person
+// @Failure 400 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /persons/{id} [put]
 func (h *PersonHandler) Update(w http.ResponseWriter, r *http.Request) {
 	id, err := extractIDFromURL(r.URL.Path)
 	if err != nil {
@@ -116,6 +141,18 @@ func (h *PersonHandler) Update(w http.ResponseWriter, r *http.Request) {
 	respondWithJSON(w, http.StatusOK, person)
 }
 
+// Delete godoc
+// @Summary Delete a person
+// @Description Delete a person by ID
+// @Tags persons
+// @Accept json
+// @Produce json
+// @Param id path int true "Person ID"
+// @Success 204
+// @Failure 400 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /persons/{id} [delete]
 func (h *PersonHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	id, err := extractIDFromURL(r.URL.Path)
 	if err != nil {
@@ -139,35 +176,18 @@ func (h *PersonHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-type PaginatedResponse struct {
-	Data       []domain.Person `json:"data"`
-	Total      int             `json:"total"`
-	Page       int             `json:"page"`
-	PageSize   int             `json:"page_size"`
-	TotalPages int             `json:"total_pages"`
-}
-
-type ErrorResponse struct {
-	Error string `json:"error"`
-}
-
-func respondWithError(w http.ResponseWriter, code int, message string) {
-	respondWithJSON(w, code, ErrorResponse{Error: message})
-}
-
-func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
-	response, err := json.Marshal(payload)
-	if err != nil {
-
-		logrus.WithError(err).Error("Failed to marshal JSON response")
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(code)
-	w.Write(response)
-}
+// GetByID godoc
+// @Summary Get person by ID
+// @Description Get a person by their ID
+// @Tags persons
+// @Accept json
+// @Produce json
+// @Param id path int true "Person ID"
+// @Success 200 {object} domain.Person
+// @Failure 400 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /persons/{id} [get]
 func (h *PersonHandler) GetByID(ctx context.Context, id int64) (*domain.Person, error) {
 	logger := h.log.WithFields(logrus.Fields{
 		"operation": "GetByID",
@@ -178,7 +198,6 @@ func (h *PersonHandler) GetByID(ctx context.Context, id int64) (*domain.Person, 
 
 	person, err := h.service.GetById(ctx, id)
 	if err != nil {
-		// Логируем ошибку
 		if err.Error() == "person not found" {
 			logger.Warn("Person not found")
 			return nil, fmt.Errorf("person not found with id %d", id)
@@ -190,6 +209,24 @@ func (h *PersonHandler) GetByID(ctx context.Context, id int64) (*domain.Person, 
 	logger.Info("Successfully fetched person")
 	return person, nil
 }
+
+// List godoc
+// @Summary List persons with filtering and pagination
+// @Description Get a list of persons with optional filters and pagination
+// @Tags persons
+// @Accept json
+// @Produce json
+// @Param name query string false "Filter by name"
+// @Param surname query string false "Filter by surname"
+// @Param patronymic query string false "Filter by patronymic"
+// @Param age_min query int false "Minimum age filter"
+// @Param age_max query int false "Maximum age filter"
+// @Param page query int false "Page number (default 1)"
+// @Param page_size query int false "Items per page (default 10)"
+// @Success 200 {object} PaginatedResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /persons [get]
 func (h *PersonHandler) List(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 
@@ -259,6 +296,38 @@ func (h *PersonHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	respondWithJSON(w, http.StatusOK, response)
 }
+
+// PaginatedResponse represents a paginated response
+type PaginatedResponse struct {
+	Data       []domain.Person `json:"data"`
+	Total      int             `json:"total"`
+	Page       int             `json:"page"`
+	PageSize   int             `json:"page_size"`
+	TotalPages int             `json:"total_pages"`
+}
+
+// ErrorResponse represents an error response
+type ErrorResponse struct {
+	Error string `json:"error"`
+}
+
+func respondWithError(w http.ResponseWriter, code int, message string) {
+	respondWithJSON(w, code, ErrorResponse{Error: message})
+}
+
+func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
+	response, err := json.Marshal(payload)
+	if err != nil {
+		logrus.WithError(err).Error("Failed to marshal JSON response")
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(code)
+	w.Write(response)
+}
+
 func toFlatList(persons []*domain.Person) []domain.Person {
 	result := make([]domain.Person, len(persons))
 	for i, p := range persons {

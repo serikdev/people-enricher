@@ -1,8 +1,8 @@
-// В main.go
 package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -12,14 +12,23 @@ import (
 	"people-enricher/internal/repository"
 	"people-enricher/internal/service"
 	"strconv"
+	"strings"
+
+	_ "people-enricher/docs"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
 	"github.com/sirupsen/logrus"
+	httpSwagger "github.com/swaggo/http-swagger"
 )
 
-func main() {
+// @title           People Information API
+// @version         1.0
+// @description     API for managing and enriching people data
+// @host            localhost:8080
+// @BasePath        /
 
+func main() {
 	logger := logrus.New()
 
 	err := godotenv.Load()
@@ -28,7 +37,7 @@ func main() {
 	}
 
 	connString := os.Getenv("DATABASE_URL")
-	fmt.Println("DATABASE_URL from .env file:")
+	fmt.Println("Connecting to database:", connString)
 
 	dbpool, err := pgxpool.New(context.Background(), connString)
 	if err != nil {
@@ -37,40 +46,58 @@ func main() {
 	defer dbpool.Close()
 
 	repo := repository.NewPersonRepo(dbpool, logger)
-
 	enricherService := client.NewEnricher(logger)
-
 	personService := service.NewPersonService(*repo, enricherService, logger)
-
 	personHandler := handler.NewPersonHandler(personService, logger)
 
-	http.HandleFunc("/persons", personHandler.Create)
-	http.HandleFunc("/persons/", func(w http.ResponseWriter, r *http.Request) {
+	mux := http.NewServeMux()
 
-		idStr := r.URL.Path[len("/persons/"):]
-		id, err := strconv.ParseInt(idStr, 10, 64)
-		if err != nil {
-			http.Error(w, "Invalid ID", http.StatusBadRequest)
-			return
+	// Swagger
+	mux.Handle("/swagger/", httpSwagger.WrapHandler)
+
+	mux.HandleFunc("/persons", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodPost:
+			personHandler.Create(w, r)
+		case http.MethodGet:
+			personHandler.List(w, r)
+		default:
+			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 		}
-
-		person, err := personHandler.GetByID(r.Context(), id)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusNotFound)
-			return
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, "Fetched person: %+v\n", person)
 	})
 
-	http.HandleFunc("/persons/update/", personHandler.Update)
-	http.HandleFunc("/persons/delete/", personHandler.Delete)
+	mux.HandleFunc("/persons/", func(w http.ResponseWriter, r *http.Request) {
+
+		path := strings.TrimPrefix(r.URL.Path, "/persons/")
+		id, err := strconv.ParseInt(path, 10, 64)
+		if err != nil {
+			http.Error(w, "Invalid ID in URL", http.StatusBadRequest)
+			return
+		}
+
+		switch r.Method {
+		case http.MethodGet:
+			person, err := personHandler.GetByID(r.Context(), id)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusNotFound)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(person)
+		case http.MethodPut:
+			r = r.WithContext(context.WithValue(r.Context(), "personID", id))
+			personHandler.Update(w, r)
+		case http.MethodDelete:
+			r = r.WithContext(context.WithValue(r.Context(), "personID", id))
+			personHandler.Delete(w, r)
+		default:
+			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		}
+	})
 
 	port := 8080
 	logger.Infof("Starting server on :%d", port)
-	err = http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
+	err = http.ListenAndServe(fmt.Sprintf(":%d", port), mux)
 	if err != nil {
 		logger.WithError(err).Fatal("Server failed")
 	}

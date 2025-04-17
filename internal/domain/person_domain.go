@@ -5,6 +5,8 @@ import (
 	"time"
 )
 
+// Person represents enriched person data in database
+// @Description Information about a person
 type Person struct {
 	ID                     int64     `json:"id"`
 	Name                   string    `json:"name"`
