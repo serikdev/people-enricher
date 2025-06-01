@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"people-enricher/internal/config"
 	"time"
 
 	"github.com/pkg/errors"
@@ -12,8 +13,11 @@ import (
 )
 
 type Enricher struct {
-	httpClient *http.Client
-	logger     *logrus.Logger
+	httpClient   *http.Client
+	logger       *logrus.Logger
+	agifyURL     string
+	genderizeURL string
+	nationalize  string
 }
 
 type AgifyResponse struct {
@@ -44,13 +48,18 @@ type EnrichmentResult struct {
 	NationalityProbability *float64 `json:"nationality_probability,omitempty"`
 }
 
-func NewEnricher(logger *logrus.Logger) *Enricher {
+func NewEnricher(cfg config.ExternalAPIConfig, logger *logrus.Logger) *Enricher {
+
 	return &Enricher{
 		httpClient: &http.Client{
 			Timeout: 10 * time.Second,
 		},
-		logger: logger,
+		logger:       logger,
+		agifyURL:     cfg.AgifyURL,
+		genderizeURL: cfg.GenderizeURL,
+		nationalize:  cfg.NationalizeURL,
 	}
+
 }
 
 func (e *Enricher) EnrichPerson(ctx context.Context, name string) (*EnrichmentResult, error) {
@@ -90,7 +99,8 @@ func (e *Enricher) EnrichPerson(ctx context.Context, name string) (*EnrichmentRe
 }
 
 func (e *Enricher) getAge(ctx context.Context, name string) (int, error) {
-	url := fmt.Sprintf("https://api.agify.io/?name=%s", name)
+
+	url := fmt.Sprintf("%s?name=%s", e.agifyURL, name)
 
 	e.logger.WithField("url", url).Debug("request to API agify.io")
 
@@ -118,7 +128,7 @@ func (e *Enricher) getAge(ctx context.Context, name string) (int, error) {
 }
 
 func (e *Enricher) getGender(ctx context.Context, name string) (string, error) {
-	url := fmt.Sprintf("https://api.genderize.io/?name=%s", name)
+	url := fmt.Sprintf("%s?name=%s", e.genderizeURL, name)
 
 	e.logger.WithField("url", url).Debug("request to genderize.io")
 
@@ -146,7 +156,7 @@ func (e *Enricher) getGender(ctx context.Context, name string) (string, error) {
 }
 
 func (e *Enricher) getNationality(ctx context.Context, name string) (string, float64, error) {
-	url := fmt.Sprintf("https://api.nationalize.io/?name=%s", name)
+	url := fmt.Sprintf("%s?name=%s", e.nationalize, name)
 
 	e.logger.WithField("url", url).Debug("request to API nationalize.io")
 
@@ -179,3 +189,10 @@ func (e *Enricher) getNationality(ctx context.Context, name string) (string, flo
 
 	return countryID, probability, nil
 }
+
+// func sanitizeName(name string) string {
+// 	// Удаляем пробелы и лишние слэши
+// 	name = strings.TrimSpace(name)
+// 	name = strings.Trim(name, "/")
+// 	return name
+// }

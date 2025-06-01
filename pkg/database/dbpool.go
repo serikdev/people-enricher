@@ -1,4 +1,4 @@
-package repository
+package database
 
 import (
 	"context"
@@ -21,15 +21,12 @@ func NewPool(ctx context.Context, cfg *config.DBCfg, logger *logrus.Logger) (*pg
 		"dbname":   cfg.DBName,
 		"sslmode":  cfg.SSLMode,
 		"username": cfg.User,
-	}).Debug("Connecting data base")
+	}).Debug("Connecting database")
 
 	poolConfig, err := pgxpool.ParseConfig(dsn)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing config: %w", err)
 	}
-
-	poolConfig.MaxConns = int32(cfg.MaxConnection)
-	poolConfig.MaxConns = int32(cfg.IdleConnection)
 
 	pool, err := pgxpool.NewWithConfig(ctx, poolConfig)
 	if err != nil {

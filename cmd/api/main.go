@@ -4,20 +4,21 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"people-enricher/internal/adapter/repository"
 	"people-enricher/internal/client"
+	"people-enricher/internal/config"
 	"people-enricher/internal/handler"
 	"people-enricher/internal/service"
+	"people-enricher/pkg/database"
+	"people-enricher/pkg/logger"
 	"strconv"
 	"strings"
+	"time"
 
 	_ "people-enricher/docs"
 
-	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/joho/godotenv"
 	"github.com/sirupsen/logrus"
 	httpSwagger "github.com/swaggo/http-swagger"
 )
@@ -29,26 +30,30 @@ import (
 // @BasePath        /
 
 func main() {
-	logger := logrus.New()
 
-	err := godotenv.Load()
+	type key string
+
+	const (
+		personKey key = "personID"
+	)
+	log := logger.NewLogger(os.Getenv("LOG_LEVEL"))
+
+	cfg, err := config.LoadCfg(".env")
 	if err != nil {
-		log.Fatalf("Error loading .env file")
+		log.WithError(err).Fatal("Error loading .env file")
 	}
-
-	connString := os.Getenv("DATABASE_URL")
-	fmt.Println("Connecting to database:", connString)
-
-	dbpool, err := pgxpool.New(context.Background(), connString)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	dbpool, err := database.NewPool(ctx, &cfg.DBConfig, &logrus.Logger{})
 	if err != nil {
-		logger.Fatalf("Unable to connect to database: %v", err)
+		log.WithError(err).Fatal("Failed to connect database")
 	}
 	defer dbpool.Close()
 
-	repo := repository.NewPersonRepo(dbpool, logger)
-	enricherService := client.NewEnricher(logger)
-	personService := service.NewPersonService(*repo, enricherService, logger)
-	personHandler := handler.NewPersonHandler(personService, logger)
+	repo := repository.NewPersonRepo(dbpool, log)
+	enricherService := client.NewEnricher(cfg.ExternalAPI, log)
+	personService := service.NewPersonService(*repo, enricherService, log)
+	personHandler := handler.NewPersonHandler(personService, log)
 
 	mux := http.NewServeMux()
 
@@ -85,10 +90,10 @@ func main() {
 			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(person)
 		case http.MethodPut:
-			r = r.WithContext(context.WithValue(r.Context(), "personID", id))
+			r = r.WithContext(context.WithValue(r.Context(), personKey, id))
 			personHandler.Update(w, r)
 		case http.MethodDelete:
-			r = r.WithContext(context.WithValue(r.Context(), "personID", id))
+			r = r.WithContext(context.WithValue(r.Context(), personKey, id))
 			personHandler.Delete(w, r)
 		default:
 			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
@@ -96,9 +101,9 @@ func main() {
 	})
 
 	port := 8080
-	logger.Infof("Starting server on :%d", port)
+	log.Infof("Starting server on :%d", port)
 	err = http.ListenAndServe(fmt.Sprintf(":%d", port), mux)
 	if err != nil {
-		logger.WithError(err).Fatal("Server failed")
+		log.WithError(err).Fatal("Server failed")
 	}
 }
