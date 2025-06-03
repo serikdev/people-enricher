@@ -17,11 +17,11 @@ import (
 // PersonHandler handles HTTP requests for person operations
 type PersonHandler struct {
 	service entity.PersonService
-	log     *logrus.Logger
+	log     *logrus.Entry
 }
 
 // NewPersonHandler creates a new PersonHandler
-func NewPersonHandler(service entity.PersonService, log *logrus.Logger) *PersonHandler {
+func NewPersonHandler(service entity.PersonService, log *logrus.Entry) *PersonHandler {
 	return &PersonHandler{
 		service: service,
 		log:     log,

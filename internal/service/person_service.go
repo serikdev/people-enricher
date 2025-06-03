@@ -23,10 +23,10 @@ type PersonRepo interface {
 type personService struct {
 	repo     repository.PersonRepo
 	enricher *client.Enricher
-	log      *logrus.Logger
+	log      *logrus.Entry
 }
 
-func NewPersonService(repo repository.PersonRepo, enricher *client.Enricher, log *logrus.Logger) *personService {
+func NewPersonService(repo repository.PersonRepo, enricher *client.Enricher, log *logrus.Entry) *personService {
 	return &personService{
 		repo:     repo,
 		enricher: enricher,

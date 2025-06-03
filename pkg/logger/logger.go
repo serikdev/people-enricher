@@ -2,28 +2,32 @@ package logger
 
 import (
 	"os"
-	"strings"
-	"time"
 
 	"github.com/sirupsen/logrus"
 )
 
-func NewLogger(level string) *logrus.Logger {
-	logger := logrus.New()
+type Logger = *logrus.Entry
 
-	logger.SetFormatter(&logrus.TextFormatter{
-		FullTimestamp:   true,
-		TimestampFormat: time.RFC3339,
+func NewLogger() Logger {
+	log := logrus.New()
+
+	log.SetFormatter(&logrus.JSONFormatter{
+		FieldMap: logrus.FieldMap{
+			logrus.FieldKeyMsg: "message",
+		},
 	})
-
-	logger.SetOutput(os.Stdout)
-
-	level = strings.TrimSpace(strings.ToLower(level))
-	logLevel, err := logrus.ParseLevel(level)
-	if err != nil {
-		logLevel = logrus.InfoLevel
+	switch os.Getenv("LOG_LEVEL") {
+	case "debug":
+		log.SetLevel(logrus.DebugLevel)
+	case "warn":
+		log.SetLevel(logrus.WarnLevel)
+	case "error":
+		log.SetLevel(logrus.ErrorLevel)
+	default:
+		log.SetLevel(logrus.InfoLevel)
 	}
-	logger.SetLevel(logLevel)
+	log.SetOutput(os.Stdout)
 
-	return logger
+	logg := logrus.NewEntry(log)
+	return logg
 }

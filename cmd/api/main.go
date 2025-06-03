@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
 	"people-enricher/internal/adapter/repository"
 	"people-enricher/internal/client"
 	"people-enricher/internal/config"
@@ -19,7 +18,6 @@ import (
 
 	_ "people-enricher/docs"
 
-	"github.com/sirupsen/logrus"
 	httpSwagger "github.com/swaggo/http-swagger"
 )
 
@@ -36,7 +34,7 @@ func main() {
 	const (
 		personKey key = "personID"
 	)
-	log := logger.NewLogger(os.Getenv("LOG_LEVEL"))
+	log := logger.NewLogger()
 
 	cfg, err := config.LoadCfg(".env")
 	if err != nil {
@@ -44,7 +42,7 @@ func main() {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	dbpool, err := database.NewPool(ctx, &cfg.DBConfig, &logrus.Logger{})
+	dbpool, err := database.NewPool(ctx, &cfg.DBConfig, log)
 	if err != nil {
 		log.WithError(err).Fatal("Failed to connect database")
 	}

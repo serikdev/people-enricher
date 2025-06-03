@@ -14,7 +14,7 @@ import (
 
 type Enricher struct {
 	httpClient   *http.Client
-	logger       *logrus.Logger
+	logger       *logrus.Entry
 	agifyURL     string
 	genderizeURL string
 	nationalize  string
@@ -48,7 +48,7 @@ type EnrichmentResult struct {
 	NationalityProbability *float64 `json:"nationality_probability,omitempty"`
 }
 
-func NewEnricher(cfg config.ExternalAPIConfig, logger *logrus.Logger) *Enricher {
+func NewEnricher(cfg config.ExternalAPIConfig, logger *logrus.Entry) *Enricher {
 
 	return &Enricher{
 		httpClient: &http.Client{

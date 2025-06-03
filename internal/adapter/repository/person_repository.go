@@ -15,10 +15,10 @@ import (
 
 type PersonRepo struct {
 	pool   *pgxpool.Pool
-	logger *logrus.Logger
+	logger *logrus.Entry
 }
 
-func NewPersonRepo(pool *pgxpool.Pool, logger *logrus.Logger) *PersonRepo {
+func NewPersonRepo(pool *pgxpool.Pool, logger *logrus.Entry) *PersonRepo {
 	return &PersonRepo{
 		pool:   pool,
 		logger: logger,
